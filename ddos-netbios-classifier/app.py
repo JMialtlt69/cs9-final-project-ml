@@ -120,6 +120,21 @@ with col2:
 st.subheader("Custom CSV prediction")
 uploaded = st.file_uploader("Upload a CSV network-flow record", type=["csv"])
 
+SAMPLE_DIR = os.path.join(ROOT, "sample_csvs")
+with st.expander("Download sample CSVs to try"):
+    st.caption(
+        "Authentic = real CICDDoS2019 DrDoS_NetBIOS holdout flows. Synthetic = bootstrap + jitter "
+        "stress-test data generated from the training set. Both include a 'True Label' column."
+    )
+    for fname, label in [
+        ("authentic_cicddos2019_sample.csv", "Authentic CICDDoS2019 sample (200 rows)"),
+        ("synthetic_stress_sample.csv", "Synthetic stress-test sample (200 rows)"),
+    ]:
+        fpath = os.path.join(SAMPLE_DIR, fname)
+        if os.path.exists(fpath):
+            with open(fpath, "rb") as fh:
+                st.download_button(f"⬇ {label}", fh.read(), file_name=fname, mime="text/csv")
+
 if uploaded is not None:
     try:
         uploaded_df = pd.read_csv(uploaded)
@@ -134,10 +149,24 @@ if uploaded is not None:
             results = uploaded_df.copy()
             results["Predicted Class"] = np.where(pred == 1, "DrDoS_NetBIOS", "BENIGN")
             results["Attack Probability"] = prob
-            st.dataframe(
-                results[["Predicted Class", "Attack Probability"]],
-                use_container_width=True,
-            )
+            label_col = next((c for c in ("True Label", "Label") if c in uploaded_df.columns), None)
+            if label_col is not None:
+                truth = uploaded_df[label_col].astype(str).str.strip()
+                truth = truth.replace({"0": "BENIGN", "1": "DrDoS_NetBIOS"})
+                results["Correct"] = np.where(results["Predicted Class"] == truth, "✔", "✘")
+                acc = (results["Correct"] == "✔").mean()
+                m1, m2 = st.columns(2)
+                m1.metric("Accuracy vs. true labels", f"{acc:.2%}")
+                m2.metric("Misclassified rows", int((results["Correct"] == "✘").sum()))
+                st.write("**Confusion matrix** (rows = actual, columns = predicted)")
+                st.dataframe(
+                    pd.crosstab(truth.rename("Actual"), results["Predicted Class"].rename("Predicted")),
+                    use_container_width=True,
+                )
+                show_cols = ["Predicted Class", "Attack Probability", "Correct"]
+            else:
+                show_cols = ["Predicted Class", "Attack Probability"]
+            st.dataframe(results[show_cols], use_container_width=True)
     except Exception as exc:
         st.error("The uploaded CSV could not be processed.")
         st.exception(exc)
