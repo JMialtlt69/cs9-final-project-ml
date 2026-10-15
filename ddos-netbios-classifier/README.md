@@ -8,9 +8,10 @@ Interactive Streamlit demonstration for the project:
 
 The application loads the fitted final Random Forest pipeline exported from the project notebook. It provides:
 
+- **manual input form**: type the 30 flow features the model uses (or start from a preset) and get a BENIGN / DrDoS_NetBIOS classification with the attack probability
 - one-click BENIGN demonstration
 - one-click DrDoS_NetBIOS demonstration
-- optional CSV prediction for network-flow records
+- optional CSV prediction for network-flow records (labeled files also report accuracy and a confusion matrix), with downloadable authentic and synthetic sample CSVs
 - predicted class and attack probability
 
 ## Model used
